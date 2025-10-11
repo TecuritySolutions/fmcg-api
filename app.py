@@ -165,7 +165,7 @@ def predict():
             # score = max(0, min(100, score))
         except Exception:
             score = str(prediction)
-
+        print("prediction score ====> ", round(float(prediction), 2))
         return jsonify({
             "status": "success",
             "model_used": model_key,
