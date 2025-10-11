@@ -28,11 +28,27 @@ CORS(app)
 
 MODELS_DIR = "models"
 
-MODELS = {
-    "fmcg_darknet": joblib.load(os.path.join(MODELS_DIR, "fmcg-1.joblib")),
-    "fmcg_hashlock": joblib.load(os.path.join(MODELS_DIR, "fmcg-2.joblib")),
-    "fmcg_infinity": joblib.load(os.path.join(MODELS_DIR, "fmcg-5.joblib")),
+MODELS = {}
+
+# Load models with error handling
+model_files = {
+    "fmcg_darknet": "fmcg-1.joblib",
+    "fmcg_hashlock": "fmcg-2.joblib",
+    "fmcg_infinity": "fmcg-5.joblib"
 }
+
+for model_name, model_file in model_files.items():
+    try:
+        MODELS[model_name] = joblib.load(os.path.join(MODELS_DIR, model_file))
+        print(f"✓ Loaded model: {model_name}")
+    except Exception as e:
+        print(f"⚠ Warning: Could not load model {model_name}: {e}")
+        # Add placeholder for demo purposes
+        MODELS[model_name] = "model_placeholder"
+
+# Ensure at least one model is available for demo
+if not any(model != "model_placeholder" for model in MODELS.values()):
+    print("⚠ Running in demo mode - no models loaded successfully")
 
 
 # ------------------------------------------------------------------------------
@@ -91,7 +107,7 @@ def predict():
     """Handles FMCG model prediction requests."""
     try:
         data = request.get_json()
-
+        print("Received data ====> ", data)
         if not data:
             return jsonify({"error": "Invalid or empty JSON payload"}), 400
 
@@ -168,6 +184,162 @@ def predict():
 def health_check():
     """Returns the health status of the API."""
     return jsonify({"status": "OK", "service": "FMCG Prediction API"})
+
+
+@app.route("/docs", methods=["GET"])
+def get_docs():
+    """Returns comprehensive API documentation."""
+    docs = {
+        "api_info": {
+            "name": "FMCG Intelligent Forecasting API",
+            "version": "1.0.0",
+            "description": "Production-ready Flask backend for FMCG model predictions. Accepts JSON input from frontend forms or Postman, validates input fields, and serves multiple pre-trained ML models.",
+            "base_url": request.url_root.rstrip('/')
+        },
+        "endpoints": [
+            {
+                "path": "/",
+                "method": "GET",
+                "description": "Root API route for metadata and service status",
+                "parameters": [],
+                "response_example": {
+                    "service": "FMCG Prediction API",
+                    "status": "active",
+                    "available_models": list(MODELS.keys()),
+                    "usage": "POST /predict with JSON body"
+                }
+            },
+            {
+                "path": "/predict",
+                "method": "POST",
+                "description": "Main prediction endpoint for FMCG warehouse forecasting",
+                "content_type": "application/json",
+                "required_fields": [
+                    {"name": "model", "type": "string", "description": "Model to use for prediction", "allowed_values": list(MODELS.keys())},
+                    {"name": "Location_type", "type": "string", "description": "Type of warehouse location (Urban/Rural/Semi-urban)"},
+                    {"name": "WH_capacity_size", "type": "numeric", "description": "Warehouse capacity size in cubic units"},
+                    {"name": "zone", "type": "string", "description": "Geographical zone (North/South/East/West/Central)"},
+                    {"name": "WH_regional_zone", "type": "string", "description": "Regional administrative zone"},
+                    {"name": "num_refill_req_l3m", "type": "numeric", "description": "Number of refill requests in last 3 months"},
+                    {"name": "transport_issue_l1y", "type": "numeric", "description": "Transportation issues reported in last 1 year"},
+                    {"name": "Competitor_in_mkt", "type": "numeric", "description": "Number of competitors in market area"},
+                    {"name": "retail_shop_num", "type": "numeric", "description": "Number of retail shops served"},
+                    {"name": "wh_owner_type", "type": "string", "description": "Warehouse ownership type (Private/Government/Leased)"},
+                    {"name": "distributor_num", "type": "numeric", "description": "Number of distributors connected"},
+                    {"name": "flood_impacted", "type": "numeric", "description": "Flood impact history (0=No, 1=Yes)"},
+                    {"name": "flood_proof", "type": "numeric", "description": "Flood protection measures (0=No, 1=Yes)"},
+                    {"name": "electric_supply", "type": "numeric", "description": "Electricity supply reliability score"},
+                    {"name": "dist_from_hub", "type": "numeric", "description": "Distance from distribution hub in kilometers"},
+                    {"name": "workers_num", "type": "numeric", "description": "Number of workers employed"},
+                    {"name": "wh_est_year", "type": "numeric", "description": "Year warehouse was established"},
+                    {"name": "storage_issue_reported_l3m", "type": "numeric", "description": "Storage issues reported in last 3 months"},
+                    {"name": "temp_reg_mach", "type": "numeric", "description": "Temperature regulation machinery (0=No, 1=Yes)"},
+                    {"name": "approved_wh_govt_certificate", "type": "numeric", "description": "Government certification status (0=No, 1=Yes)"},
+                    {"name": "wh_breakdown_l3m", "type": "numeric", "description": "Warehouse breakdowns in last 3 months"},
+                    {"name": "govt_check_l3m", "type": "numeric", "description": "Government inspections in last 3 months"},
+                    {"name": "product_wg_ton", "type": "numeric", "description": "Product weight capacity in tons"}
+                ],
+                "request_example": {
+                    "model": "fmcg_darknet",
+                    "Location_type": "Urban",
+                    "WH_capacity_size": 1000,
+                    "zone": "North",
+                    "WH_regional_zone": "Zone-A",
+                    "num_refill_req_l3m": 5,
+                    "transport_issue_l1y": 2,
+                    "Competitor_in_mkt": 3,
+                    "retail_shop_num": 15,
+                    "wh_owner_type": "Private",
+                    "distributor_num": 8,
+                    "flood_impacted": 0,
+                    "flood_proof": 1,
+                    "electric_supply": 85,
+                    "dist_from_hub": 25,
+                    "workers_num": 12,
+                    "wh_est_year": 2018,
+                    "storage_issue_reported_l3m": 1,
+                    "temp_reg_mach": 1,
+                    "approved_wh_govt_certificate": 1,
+                    "wh_breakdown_l3m": 0,
+                    "govt_check_l3m": 2,
+                    "product_wg_ton": 500
+                },
+                "response_example": {
+                    "status": "success",
+                    "model_used": "fmcg_darknet",
+                    "prediction_score": 85.32
+                },
+                "error_responses": [
+                    {"code": 400, "description": "Invalid or missing fields", "example": {"error": "Missing fields: ['Location_type', 'zone']"}},
+                    {"code": 400, "description": "Invalid model selection", "example": {"error": "Invalid or missing 'model' key", "available_models": list(MODELS.keys())}},
+                    {"code": 500, "description": "Server error during prediction", "example": {"error": "Server Error: [error details]"}}
+                ]
+            },
+            {
+                "path": "/health",
+                "method": "GET",
+                "description": "Health check endpoint to verify API status",
+                "response_example": {
+                    "status": "OK",
+                    "service": "FMCG Prediction API"
+                }
+            },
+            {
+                "path": "/docs",
+                "method": "GET",
+                "description": "This comprehensive API documentation endpoint"
+            }
+        ],
+        "models": {
+            "fmcg_darknet": {
+                "file": "models/fmcg-1.joblib",
+                "description": "Primary FMCG forecasting model for warehouse performance prediction"
+            },
+            "fmcg_hashlock": {
+                "file": "models/fmcg-2.joblib",
+                "description": "Alternative FMCG forecasting model with different training parameters"
+            },
+            "fmcg_infinity": {
+                "file": "models/fmcg-5.joblib",
+                "description": "Advanced FMCG forecasting model optimized for complex scenarios"
+            }
+        },
+        "usage_examples": {
+            "curl": f"curl -X POST {request.url_root}predict -H 'Content-Type: application/json' -d '{{\"model\": \"fmcg_darknet\", \"Location_type\": \"Urban\", \"WH_capacity_size\": 1000, \"zone\": \"North\", ...}}'",
+            "python": f"""import requests
+import json
+
+url = "{request.url_root}predict"
+data = {{
+    "model": "fmcg_darknet",
+    "Location_type": "Urban",
+    "WH_capacity_size": 1000,
+    "zone": "North",
+    # ... include all 22 required fields
+}}
+
+response = requests.post(url, json=data)
+result = response.json()
+print(result)""",
+            "javascript": f"""fetch('{request.url_root}predict', {{
+  method: 'POST',
+  headers: {{
+    'Content-Type': 'application/json',
+  }},
+  body: JSON.stringify({{
+    model: 'fmcg_darknet',
+    Location_type: 'Urban',
+    WH_capacity_size: 1000,
+    zone: 'North',
+    // ... include all 22 required fields
+  }})
+}})
+.then(response => response.json())
+.then(data => console.log(data));"""
+        }
+    }
+
+    return jsonify(docs)
 
 
 # ------------------------------------------------------------------------------
