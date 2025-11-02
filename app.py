@@ -175,6 +175,55 @@ def predict():
     except Exception as err:
         return jsonify({"error": f"Server Error: {str(err)}"}), 500
 
+# --------------------------------------------------------------------------
+# Pincode Autofill Route (NEW)
+# --------------------------------------------------------------------------
+
+@app.route("/pincode", methods=["POST"])
+def get_pincode_details():
+    """
+    Fetches location details (population, landmarks, etc.)
+    based on the given pincode using local CSV data.
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Missing JSON body"}), 400
+
+        # Accept either 'pincode' or 'Pincode'
+        pincode = str(data.get("pincode") or data.get("Pincode") or "").strip()
+        if not pincode:
+            return jsonify({"error": "Missing 'pincode' field"}), 400
+
+        # Load CSV (in same folder as app.py)
+        df = pd.read_csv("pincode_data.csv", dtype=str)
+
+        # Normalize column names (remove case sensitivity)
+        df.columns = df.columns.str.strip().str.lower()
+
+        # Match pincode
+        if "pincode" not in df.columns:
+            return jsonify({"error": "CSV missing 'pincode' column"}), 500
+
+        matched_row = df[df["pincode"].astype(str) == pincode]
+        if matched_row.empty:
+            return jsonify({"error": f"No data found for pincode {pincode}"}), 404
+
+        record = matched_row.iloc[0].to_dict()
+
+        # Safely extract available details
+        details = {
+            "pincode": record.get("Pincode")or record.get("pincode"),
+            "population": record.get("population") or record.get("Population"),
+            "landmark": record.get("Place_name") or record.get("place_name") or record.get("landmark"),
+        }
+
+        return jsonify({"status": "success", "details": details})
+
+    except Exception as e:
+        return jsonify({"error": f"Server Error: {str(e)}"}), 500
+
+
 
 # ------------------------------------------------------------------------------
 # Health Check Route
